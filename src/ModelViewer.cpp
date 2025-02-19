@@ -78,6 +78,22 @@ bool ModelViewer::checkValidationLayerSupport()
 	return true;
 }
 
+std::vector<const char*> ModelViewer::getRequiredExtensions()
+{
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions;
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+	if (enableValidationLayers)
+	{
+		extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	}
+
+	return extensions;
+}
+
 vk::DebugUtilsMessengerCreateInfoEXT ModelViewer::getDebugMessengerCreateInfo()
 {
 	vk::DebugUtilsMessengerCreateInfoEXT createInfo;
@@ -97,6 +113,16 @@ void ModelViewer::setupDebugMessenger()
 	VkDebugUtilsMessengerCreateInfoEXT createInfo = getDebugMessengerCreateInfo();
 	vk::DispatchLoaderDynamic dldi(instance, vkGetInstanceProcAddr);
 	debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
+}
+
+void ModelViewer::createSurface()
+{
+	VkSurfaceKHR surface;
+	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create window surface!");
+	}
+	this->surface = surface;
 }
 
 void ModelViewer::pickPhysicalDevice()
@@ -941,6 +967,50 @@ void ModelViewer::createTextureSampler()
 	textureSampler = device.createSampler(samplerInfo);
 }
 
+void ModelViewer::loadModel()
+{
+	tinyobj::attrib_t attrib;
+	std::vector<tinyobj::shape_t> shapes;
+	std::vector<tinyobj::material_t> materials;
+	std::string warn, err;
+
+	if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str()))
+	{
+		throw std::runtime_error(warn + err);
+	}
+
+	std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+	for (const auto& shape : shapes)
+	{
+		for (const auto& index : shape.mesh.indices)
+		{
+			Vertex vertex{};
+
+			vertex.pos = {
+				attrib.vertices[3 * index.vertex_index + 0],
+				attrib.vertices[3 * index.vertex_index + 1],
+				attrib.vertices[3 * index.vertex_index + 2]
+			};
+
+			vertex.texCoord = {
+				attrib.texcoords[2 * index.texcoord_index + 0],
+				1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+			};
+
+			vertex.color = { 1.0f, 1.0f, 1.0f };
+
+			if (uniqueVertices.count(vertex) == 0)
+			{
+				uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+				vertices.push_back(vertex);
+			}
+
+			indices.push_back(uniqueVertices[vertex]);
+		}
+	}
+}
+
 void ModelViewer::createVertexBuffer()
 {
 	vk::DeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
@@ -1128,7 +1198,6 @@ void ModelViewer::drawFrame()
 
 	updateUniformBuffer(currentFrame);
 
-	// vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
 	vk::PipelineStageFlags waitStages{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
 
 	vk::SubmitInfo submitInfo{
@@ -1209,6 +1278,22 @@ void ModelViewer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t 
 	commandBuffer.end();
 }
 
+void ModelViewer::updateUniformBuffer(uint32_t currentImage)
+{
+	static auto startTime = std::chrono::high_resolution_clock::now();
+
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+	UniformBufferObject ubo{};
+	ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+	ubo.proj[1][1] *= -1;
+
+	memcpy(uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+}
+
 void ModelViewer::cleanupSwapChain()
 {
 	device.destroyImageView(colorImageView);
@@ -1226,6 +1311,27 @@ void ModelViewer::cleanupSwapChain()
 	}
 
 	device.destroySwapchainKHR(swapChain);
+}
+
+void ModelViewer::recreateSwapChain()
+{
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(window, &width, &height);
+	while (width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(window, &width, &height);
+		glfwWaitEvents();
+	}
+
+	device.waitIdle();
+
+	cleanupSwapChain();
+
+	createSwapChain();
+	createImageViews();
+	createColorResources();
+	createDepthResources();
+	createFramebuffers();
 }
 
 void ModelViewer::cleanup()
