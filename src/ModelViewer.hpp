@@ -28,6 +28,8 @@
 #include <set>
 #include <unordered_map>
 
+#include "Instance.hpp"
+
 
 extern const uint32_t WIDTH;
 extern const uint32_t HEIGHT;
@@ -137,8 +139,7 @@ public:
 private:
 	GLFWwindow* window;
 
-	vk::Instance instance;
-	vk::DebugUtilsMessengerEXT debugMessenger;
+	Instance instance;
 	vk::SurfaceKHR surface;
 
 	vk::PhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -220,8 +221,8 @@ private:
 
 	void initVulkan()
 	{
-		createInstance();
-		setupDebugMessenger();
+	// FIXME : delete after implementing a Window class.
+		instance.init();
 		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
@@ -265,10 +266,6 @@ private:
 	void recreateSwapChain();
 
 	void createInstance();
-
-	vk::DebugUtilsMessengerCreateInfoEXT getDebugMessengerCreateInfo();
-
-	void setupDebugMessenger();
 
 	void createSurface();
 
@@ -363,10 +360,6 @@ private:
 
 	QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
 
-	std::vector<const char*> getRequiredExtensions();
-
-	bool checkValidationLayerSupport();
-
 	void updateUniformBuffer(uint32_t currentImage);
 
 	vk::SampleCountFlagBits getMaxUsableSampleCount()
@@ -408,10 +401,4 @@ private:
 		return buffer;
 	}
 
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
-	{
-		std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-		return VK_FALSE;
-	}
 };

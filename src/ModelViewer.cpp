@@ -26,99 +26,10 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-void ModelViewer::createInstance()
-{
-	if (enableValidationLayers && !checkValidationLayerSupport())
-	{
-		throw std::runtime_error("validation layers requested, but not available!");
-	}
-
-	vk::ApplicationInfo appInfo("Model Viewer",
-		VK_MAKE_VERSION(1, 0, 0),
-		"No Engine",
-		VK_MAKE_VERSION(1, 0, 0),
-		VK_API_VERSION_1_1);
-
-	auto extensions = getRequiredExtensions();
-	vk::InstanceCreateInfo createInfo({}, &appInfo, {}, extensions);
-
-	vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo = getDebugMessengerCreateInfo();
-	if (enableValidationLayers)
-	{
-		createInfo.setPEnabledLayerNames(validationLayers);
-		createInfo.setPNext(&debugCreateInfo);
-	}
-
-	instance = vk::createInstance(createInfo);
-}
-
-bool ModelViewer::checkValidationLayerSupport()
-{
-	auto availableLayers = vk::enumerateInstanceLayerProperties();
-
-	for (const char* layerName : validationLayers)
-	{
-		bool layerFound = false;
-
-		for (const auto& layerProperties : availableLayers)
-		{
-			if (strcmp(layerName, layerProperties.layerName) == 0)
-			{
-				layerFound = true;
-				break;
-			}
-		}
-
-		if (!layerFound)
-		{
-			return false;
-		}
-	}
-
-	return true;
-}
-
-std::vector<const char*> ModelViewer::getRequiredExtensions()
-{
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers)
-	{
-		extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-
-	return extensions;
-}
-
-vk::DebugUtilsMessengerCreateInfoEXT ModelViewer::getDebugMessengerCreateInfo()
-{
-	vk::DebugUtilsMessengerCreateInfoEXT createInfo;
-	createInfo.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-	createInfo.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-	createInfo.setPfnUserCallback(debugCallback);
-	return createInfo;
-}
-
-void ModelViewer::setupDebugMessenger()
-{
-	if (!enableValidationLayers) return;
-	VkDebugUtilsMessengerCreateInfoEXT createInfo = getDebugMessengerCreateInfo();
-	vk::DispatchLoaderDynamic dldi(instance, vkGetInstanceProcAddr);
-	debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
-}
-
 void ModelViewer::createSurface()
 {
 	VkSurfaceKHR surface;
-	if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance.get(), window, nullptr, &surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -127,7 +38,7 @@ void ModelViewer::createSurface()
 
 void ModelViewer::pickPhysicalDevice()
 {
-	auto devices = instance.enumeratePhysicalDevices();
+	auto devices = instance.get().enumeratePhysicalDevices();
 	if (devices.empty())
 	{
 		throw std::runtime_error("failed to find GPUs with Vulkan support!");
@@ -1376,14 +1287,9 @@ void ModelViewer::cleanup()
 
 	device.destroy();
 
-	if (enableValidationLayers)
-	{
-		vk::DispatchLoaderDynamic dldi{ instance, vkGetInstanceProcAddr };
-		instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dldi);
-	}
+	instance.get().destroySurfaceKHR(surface);
 
-	instance.destroySurfaceKHR(surface);
-
+	// FIXME : delete after implementing a Window class.
 	instance.destroy();
 
 	glfwDestroyWindow(window);

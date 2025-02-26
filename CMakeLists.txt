@@ -21,6 +21,7 @@ add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 add_executable(${PROJECT_NAME} 
 	main.cpp
 	src/ModelViewer.cpp
+	src/Instance.cpp
 	src/stb_Impl.cpp
 	src/tiny_obj_loader_Impl.cpp)
 
