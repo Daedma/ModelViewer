@@ -1,37 +1,71 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <iterator>
 
 #include "Instance.hpp"
+#include "AppInfo.hpp"
 
-
-vk::InstanceCreateInfo Instance::getDefaultCreateInfo()
+InstanceConfig InstanceConfig::getDefaultConfig(bool enableValidationLayers)
 {
-	if (enableValidationLayers && !checkValidationLayerSupport())
+	InstanceConfig config{};
+	config.appName = appInfo::general::appName;
+	config.appVersion = VK_MAKE_VERSION(
+		appInfo::general::appVersion.major,
+		appInfo::general::appVersion.minor,
+		appInfo::general::appVersion.patch);
+	config.engineName = appInfo::general::engineName;
+	config.engineVersion = VK_MAKE_VERSION(
+		appInfo::general::engineVersion.major,
+		appInfo::general::engineVersion.minor,
+		appInfo::general::engineVersion.patch);
+
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions;
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+	config.extensions.assign(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+	if (enableValidationLayers)
+	{
+		config.extensions.emplace_back(appInfo::validation::debugMessengerExtension);
+		config.layers.assign(std::cbegin(appInfo::validation::validationLayers),
+			std::cend(appInfo::validation::validationLayers));
+		config.debugCallback = appInfo::validation::debugCallback;
+	}
+
+	return config;
+}
+
+vk::Instance Instance::create(const InstanceConfig& config)
+{
+	if (config.isValidationEnabled() && !checkValidationLayerSupport(config.layers))
 	{
 		throw std::runtime_error("validation layers requested, but not available!");
 	}
 
-	vk::ApplicationInfo appInfo("Model Viewer",
-		VK_MAKE_VERSION(1, 0, 0),
-		"No Engine",
-		VK_MAKE_VERSION(1, 0, 0),
-		VK_API_VERSION_1_1);
+	vk::ApplicationInfo appInfo(
+		config.appName.c_str(),
+		config.appVersion,
+		config.engineName.c_str(),
+		config.engineVersion);
 
-	auto extensions = getRequiredExtensions();
-	vk::InstanceCreateInfo createInfo({}, &appInfo, {}, extensions);
+	vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo(
+		{},
+		appInfo::validation::messageSeverity,
+		appInfo::validation::messageType,
+		config.debugCallback);
 
-	vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo = getDebugMessengerCreateInfo();
-	if (enableValidationLayers)
-	{
-		createInfo.setPEnabledLayerNames(validationLayers);
-		createInfo.setPNext(&debugCreateInfo);
-	}
+	vk::InstanceCreateInfo createInfo(
+		{},
+		&appInfo,
+		config.layers,
+		config.extensions,
+		config.isValidationEnabled() ? &debugCreateInfo : nullptr);
 
-	return createInfo;
+	return vk::createInstance(createInfo);
 }
 
-bool Instance::checkValidationLayerSupport()
+bool Instance::checkValidationLayerSupport(const std::vector<const char*>& validationLayers)
 {
 	auto availableLayers = vk::enumerateInstanceLayerProperties();
 
@@ -56,41 +90,3 @@ bool Instance::checkValidationLayerSupport()
 
 	return true;
 }
-
-std::vector<const char*> Instance::getRequiredExtensions()
-{
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-	std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-	if (enableValidationLayers)
-	{
-		extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-	}
-
-	return extensions;
-}
-
-VKAPI_ATTR VkBool32 VKAPI_CALL Instance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-	VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-	void* pUserData)
-{
-	std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-	return VK_FALSE;
-}
-
-vk::DebugUtilsMessengerCreateInfoEXT Instance::getDebugMessengerCreateInfo() noexcept
-{
-	vk::DebugUtilsMessengerCreateInfoEXT createInfo;
-	createInfo.setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
-	createInfo.setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance);
-	createInfo.setPfnUserCallback(debugCallback);
-	return createInfo;
-}
-

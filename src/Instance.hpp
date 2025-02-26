@@ -3,16 +3,39 @@
 #include <vulkan/vulkan.hpp>
 
 #include <array>
+#include <vector>
+#include <string>
+
+#include "AppInfo.hpp"
+
+struct InstanceConfig
+{
+	std::string appName;
+	uint32_t appVersion;
+	std::string engineName;
+	uint32_t engineVersion;
+	std::vector<const char*> extensions;
+	std::vector<const char*> layers;
+	PFN_vkDebugUtilsMessengerCallbackEXT debugCallback;
+
+	bool isValidationEnabled() const noexcept { return !layers.empty(); }
+
+	static InstanceConfig getDefaultConfig(bool enableValidationLayers);
+};
 
 class Instance
 {
 public:
-	Instance(vk::InstanceCreateInfo createInfo_ = getDefaultCreateInfo()) :
-		instance(vk::createInstance(createInfo_))
+	Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers)) :
+		instance(create(config)), enableValidationLayers(config.isValidationEnabled())
 	{
 		if (enableValidationLayers)
 		{
-			VkDebugUtilsMessengerCreateInfoEXT createInfo = getDebugMessengerCreateInfo();
+			vk::DebugUtilsMessengerCreateInfoEXT createInfo(
+				{},
+				appInfo::validation::messageSeverity,
+				appInfo::validation::messageType,
+				config.debugCallback);
 			vk::DispatchLoaderDynamic dldi(instance, vkGetInstanceProcAddr);
 			debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
 		}
@@ -34,27 +57,14 @@ public:
 	vk::Instance get() const noexcept { return instance; }
 private:
 	vk::Instance instance;
+	vk::PhysicalDevice physicalDevice;
+
+	bool enableValidationLayers;
 	vk::DebugUtilsMessengerEXT debugMessenger;
 
-	static vk::InstanceCreateInfo getDefaultCreateInfo();
+private:
 
-	static constexpr std::array<const char*, 1> validationLayers = {
-		"VK_LAYER_KHRONOS_validation"
-	};
+	vk::Instance create(const InstanceConfig& config);
 
-	static bool checkValidationLayerSupport();
-
-	static std::vector<const char*> getRequiredExtensions();
-
-	static vk::DebugUtilsMessengerCreateInfoEXT getDebugMessengerCreateInfo() noexcept;
-
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData);
-
-#ifdef NDEBUG
-	static constexpr bool enableValidationLayers = false;
-#else
-	static constexpr bool enableValidationLayers = true;
-#endif
+	static bool checkValidationLayerSupport(const std::vector<const char*>& validationLayers);
 };
