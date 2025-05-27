@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-
 #include "AppInfo.hpp"
 
 class GLFWwindow;
@@ -9,13 +7,15 @@ class GLFWwindow;
 class Window
 {
 public:
-	Window(size_t width, size_t height, const char* title, vk::Instance instance);
+	Window(size_t width, size_t height, const char* title);
 
-	Window(vk::Instance instance) :
-		Window(appInfo::general::windowSize.width, appInfo::general::windowSize.height, appInfo::general::appName, instance)
+	Window() :
+		Window(appInfo::general::windowSize.width, appInfo::general::windowSize.height, appInfo::general::appName)
 	{}
 
 	~Window() noexcept;
+
+	GLFWwindow* get() const noexcept { return m_window; }
 
 	size_t getWidth() const noexcept { return m_width; }
 
@@ -27,13 +27,4 @@ private:
 	size_t m_width;
 	size_t m_height;
 	const char* m_title;
-
-	vk::Instance m_instance;
-
-	vk::SurfaceKHR m_surface;
-
-private:
-	void createWindow();
-
-	void createSurface();
 };

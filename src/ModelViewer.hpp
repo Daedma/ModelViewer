@@ -29,6 +29,7 @@
 #include <unordered_map>
 
 #include "Instance.hpp"
+#include "Window.hpp"
 
 
 extern const uint32_t WIDTH;
@@ -130,14 +131,13 @@ class ModelViewer
 public:
 	void run()
 	{
-		initWindow();
 		initVulkan();
 		mainLoop();
 		cleanup();
 	}
 
 private:
-	GLFWwindow* window;
+	Window window;
 
 	Instance instance;
 	vk::SurfaceKHR surface;
@@ -202,17 +202,6 @@ private:
 	vk::DeviceMemory colorImageMemory;
 	vk::ImageView colorImageView;
 
-	void initWindow()
-	{
-		glfwInit();
-
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-		window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
-		glfwSetWindowUserPointer(window, this);
-		glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
-	}
-
 	static void framebufferResizeCallback(GLFWwindow* window, int width, int height)
 	{
 		auto app = reinterpret_cast<ModelViewer*>(glfwGetWindowUserPointer(window));
@@ -250,7 +239,7 @@ private:
 
 	void mainLoop()
 	{
-		while (!glfwWindowShouldClose(window))
+		while (!glfwWindowShouldClose(window.get()))
 		{
 			glfwPollEvents();
 			drawFrame();

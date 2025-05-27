@@ -29,7 +29,7 @@ const bool enableValidationLayers = true;
 void ModelViewer::createSurface()
 {
 	VkSurfaceKHR surface;
-	if (glfwCreateWindowSurface(instance.get(), window, nullptr, &surface) != VK_SUCCESS)
+	if (glfwCreateWindowSurface(instance.get(), window.get(), nullptr, &surface) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create window surface!");
 	}
@@ -246,7 +246,7 @@ vk::Extent2D ModelViewer::chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& cap
 	else
 	{
 		int width, height;
-		glfwGetFramebufferSize(window, &width, &height);
+		glfwGetFramebufferSize(window.get(), &width, &height);
 
 		vk::Extent2D actualExtent(width, height);
 
@@ -1227,10 +1227,10 @@ void ModelViewer::cleanupSwapChain()
 void ModelViewer::recreateSwapChain()
 {
 	int width = 0, height = 0;
-	glfwGetFramebufferSize(window, &width, &height);
+	glfwGetFramebufferSize(window.get(), &width, &height);
 	while (width == 0 || height == 0)
 	{
-		glfwGetFramebufferSize(window, &width, &height);
+		glfwGetFramebufferSize(window.get(), &width, &height);
 		glfwWaitEvents();
 	}
 
@@ -1291,8 +1291,4 @@ void ModelViewer::cleanup()
 
 	// FIXME : delete after implementing a Window class.
 	instance.destroy();
-
-	glfwDestroyWindow(window);
-
-	glfwTerminate();
 }
