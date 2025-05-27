@@ -1288,7 +1288,4 @@ void ModelViewer::cleanup()
 	device.destroy();
 
 	instance.get().destroySurfaceKHR(surface);
-
-	// FIXME : delete after implementing a Window class.
-	instance.destroy();
 }

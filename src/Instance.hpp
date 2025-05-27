@@ -27,38 +27,9 @@ class Instance
 {
 public:
 	// TODO : Instance constructor must take a reference to a Window object.
-	// Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::m_enableValidationLayers)) :
-	// 	m_instance(create(config)), m_enableValidationLayers(config.isValidationEnabled())
-	// {
-	// 	if (m_enableValidationLayers)
-	// 	{
-	// 		vk::DebugUtilsMessengerCreateInfoEXT createInfo(
-	// 			{},
-	// 			appInfo::validation::messageSeverity,
-	// 			appInfo::validation::messageType,
-	// 			config.debugCallback);
-	// 		vk::DispatchLoaderDynamic dldi(m_instance, vkGetInstanceProcAddr);
-	// 		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
-	// 	}
-	// }
-
-	// ~Instance() noexcept
-	// {
-	// 	if (m_enableValidationLayers)
-	// 	{
-	// 		vk::DispatchLoaderDynamic dldi{ m_instance, vkGetInstanceProcAddr };
-	// 		m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, dldi);
-	// 	}
-	// 	m_instance.destroy();
-	// };
-	// FIXME : temporary solution for testing. Fix after implementing Window class
-
-	Instance() = default;
-
-	void init(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers))
+	Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers)) :
+		m_instance(create(config)), m_enableValidationLayers(config.isValidationEnabled())
 	{
-		m_instance = create(config);
-		m_enableValidationLayers = config.isValidationEnabled();
 		if (m_enableValidationLayers)
 		{
 			vk::DebugUtilsMessengerCreateInfoEXT createInfo(
@@ -71,7 +42,7 @@ public:
 		}
 	}
 
-	void destroy() noexcept
+	~Instance() noexcept
 	{
 		if (m_enableValidationLayers)
 		{
@@ -79,7 +50,7 @@ public:
 			m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, dldi);
 		}
 		m_instance.destroy();
-	}
+	};
 
 	Instance(const Instance&) = delete;
 	Instance& operator=(const Instance&) = delete;

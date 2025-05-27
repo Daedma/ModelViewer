@@ -210,8 +210,6 @@ private:
 
 	void initVulkan()
 	{
-	// FIXME : delete after implementing a Window class.
-		instance.init();
 		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
