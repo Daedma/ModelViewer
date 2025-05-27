@@ -27,29 +27,29 @@ class Instance
 {
 public:
 	// TODO : Instance constructor must take a reference to a Window object.
-	// Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers)) :
-	// 	instance(create(config)), enableValidationLayers(config.isValidationEnabled())
+	// Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::m_enableValidationLayers)) :
+	// 	m_instance(create(config)), m_enableValidationLayers(config.isValidationEnabled())
 	// {
-	// 	if (enableValidationLayers)
+	// 	if (m_enableValidationLayers)
 	// 	{
 	// 		vk::DebugUtilsMessengerCreateInfoEXT createInfo(
 	// 			{},
 	// 			appInfo::validation::messageSeverity,
 	// 			appInfo::validation::messageType,
 	// 			config.debugCallback);
-	// 		vk::DispatchLoaderDynamic dldi(instance, vkGetInstanceProcAddr);
-	// 		debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
+	// 		vk::DispatchLoaderDynamic dldi(m_instance, vkGetInstanceProcAddr);
+	// 		m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
 	// 	}
 	// }
 
 	// ~Instance() noexcept
 	// {
-	// 	if (enableValidationLayers)
+	// 	if (m_enableValidationLayers)
 	// 	{
-	// 		vk::DispatchLoaderDynamic dldi{ instance, vkGetInstanceProcAddr };
-	// 		instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dldi);
+	// 		vk::DispatchLoaderDynamic dldi{ m_instance, vkGetInstanceProcAddr };
+	// 		m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, dldi);
 	// 	}
-	// 	instance.destroy();
+	// 	m_instance.destroy();
 	// };
 	// FIXME : temporary solution for testing. Fix after implementing Window class
 
@@ -57,40 +57,40 @@ public:
 
 	void init(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers))
 	{
-		instance = create(config);
-		enableValidationLayers = config.isValidationEnabled();
-		if (enableValidationLayers)
+		m_instance = create(config);
+		m_enableValidationLayers = config.isValidationEnabled();
+		if (m_enableValidationLayers)
 		{
 			vk::DebugUtilsMessengerCreateInfoEXT createInfo(
 				{},
 				appInfo::validation::messageSeverity,
 				appInfo::validation::messageType,
 				config.debugCallback);
-			vk::DispatchLoaderDynamic dldi(instance, vkGetInstanceProcAddr);
-			debugMessenger = instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
+			vk::DispatchLoaderDynamic dldi(m_instance, vkGetInstanceProcAddr);
+			m_debugMessenger = m_instance.createDebugUtilsMessengerEXT(createInfo, nullptr, dldi);
 		}
 	}
 
 	void destroy() noexcept
 	{
-		if (enableValidationLayers)
+		if (m_enableValidationLayers)
 		{
-			vk::DispatchLoaderDynamic dldi{ instance, vkGetInstanceProcAddr };
-			instance.destroyDebugUtilsMessengerEXT(debugMessenger, nullptr, dldi);
+			vk::DispatchLoaderDynamic dldi{ m_instance, vkGetInstanceProcAddr };
+			m_instance.destroyDebugUtilsMessengerEXT(m_debugMessenger, nullptr, dldi);
 		}
-		instance.destroy();
+		m_instance.destroy();
 	}
 
 	Instance(const Instance&) = delete;
 	Instance& operator=(const Instance&) = delete;
 
-	vk::Instance get() const noexcept { return instance; }
+	vk::Instance get() const noexcept { return m_instance; }
 private:
-	vk::Instance instance;
-	vk::PhysicalDevice physicalDevice;
+	vk::Instance m_instance;
+	vk::PhysicalDevice m_physicalDevice; // TODO: do not forget to initialize this
 
-	bool enableValidationLayers;
-	vk::DebugUtilsMessengerEXT debugMessenger;
+	bool m_enableValidationLayers;
+	vk::DebugUtilsMessengerEXT m_debugMessenger;
 
 private:
 

@@ -5,6 +5,8 @@ project(triangle)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(CMAKE_DISABLE_FIND_PACKAGE_DOXYGEN True)
+
 find_package(Vulkan REQUIRED)
 
 add_compile_definitions(VULKAN_HPP_NO_TO_STRING)
@@ -22,6 +24,7 @@ add_executable(${PROJECT_NAME}
 	main.cpp
 	src/ModelViewer.cpp
 	src/Instance.cpp
+	src/Window.cpp
 	src/stb_Impl.cpp
 	src/tiny_obj_loader_Impl.cpp)
 

@@ -26,6 +26,12 @@ namespace appInfo
 			uint8_t minor = 0;
 			uint8_t patch = 0;
 		} engineVersion;
+
+		constexpr struct
+		{
+			size_t width = 800;
+			size_t height = 600;
+		} windowSize;
 	}
 
 	namespace validation
