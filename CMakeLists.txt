@@ -25,6 +25,7 @@ add_executable(${PROJECT_NAME}
 	src/ModelViewer.cpp
 	src/Instance.cpp
 	src/Window.cpp
+	src/Surface.cpp
 	src/stb_Impl.cpp
 	src/tiny_obj_loader_Impl.cpp)
 

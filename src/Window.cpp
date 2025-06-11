@@ -20,3 +20,13 @@ Window::~Window() noexcept
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
 }
+
+vk::SurfaceKHR Window::createSurface(const vk::Instance& instance) const
+{
+	VkSurfaceKHR surface;
+	if (glfwCreateWindowSurface(instance, m_window, nullptr, &surface) != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to create window surface!");
+	}
+	return surface;
+}

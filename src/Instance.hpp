@@ -26,7 +26,6 @@ struct InstanceConfig
 class Instance
 {
 public:
-	// TODO : Instance constructor must take a reference to a Window object.
 	Instance(const InstanceConfig& config = InstanceConfig::getDefaultConfig(appInfo::validation::enableValidationLayers)) :
 		m_instance(create(config)), m_enableValidationLayers(config.isValidationEnabled())
 	{

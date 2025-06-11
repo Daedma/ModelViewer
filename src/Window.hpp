@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/vulkan.hpp>
+
 #include "AppInfo.hpp"
 
 class GLFWwindow;
@@ -14,6 +16,8 @@ public:
 	{}
 
 	~Window() noexcept;
+
+	vk::SurfaceKHR createSurface(const vk::Instance& instance) const;
 
 	GLFWwindow* get() const noexcept { return m_window; }
 
