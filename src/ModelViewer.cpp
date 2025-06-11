@@ -26,16 +26,6 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-void ModelViewer::createSurface()
-{
-	VkSurfaceKHR surface;
-	if (glfwCreateWindowSurface(instance.get(), window.get(), nullptr, &surface) != VK_SUCCESS)
-	{
-		throw std::runtime_error("failed to create window surface!");
-	}
-	this->surface = surface;
-}
-
 void ModelViewer::pickPhysicalDevice()
 {
 	auto devices = instance.get().enumeratePhysicalDevices();
@@ -96,7 +86,7 @@ QueueFamilyIndices ModelViewer::findQueueFamilies(vk::PhysicalDevice device)
 			indices.graphicsFamily = i;
 		}
 
-		vk::Bool32 presentSupport = device.getSurfaceSupportKHR(i, surface);
+		vk::Bool32 presentSupport = device.getSurfaceSupportKHR(i, surface.get());
 
 		if (presentSupport)
 		{
@@ -130,9 +120,9 @@ bool ModelViewer::checkDeviceExtensionSupport(vk::PhysicalDevice device)
 SwapChainSupportDetails ModelViewer::querySwapChainSupport(vk::PhysicalDevice device)
 {
 	SwapChainSupportDetails details;
-	details.capabilities = device.getSurfaceCapabilitiesKHR(surface);
-	details.formats = device.getSurfaceFormatsKHR(surface);
-	details.presentModes = device.getSurfacePresentModesKHR(surface);
+	details.capabilities = device.getSurfaceCapabilitiesKHR(surface.get());
+	details.formats = device.getSurfaceFormatsKHR(surface.get());
+	details.presentModes = device.getSurfacePresentModesKHR(surface.get());
 	return details;
 }
 
@@ -181,7 +171,7 @@ void ModelViewer::createSwapChain()
 	}
 
 	vk::SwapchainCreateInfoKHR createInfo({},
-		surface,
+		surface.get(),
 		imageCount,
 		surfaceFormat.format,
 		surfaceFormat.colorSpace,
@@ -1286,6 +1276,4 @@ void ModelViewer::cleanup()
 	device.destroyCommandPool(commandPool);
 
 	device.destroy();
-
-	instance.get().destroySurfaceKHR(surface);
 }

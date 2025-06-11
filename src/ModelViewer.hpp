@@ -28,8 +28,9 @@
 #include <set>
 #include <unordered_map>
 
-#include "Instance.hpp"
 #include "Window.hpp"
+#include "Instance.hpp"
+#include "Surface.hpp"
 
 
 extern const uint32_t WIDTH;
@@ -129,6 +130,12 @@ struct UniformBufferObject
 class ModelViewer
 {
 public:
+	ModelViewer() :
+		window(),
+		instance(),
+		surface(instance.get(), window)
+	{}
+
 	void run()
 	{
 		initVulkan();
@@ -140,7 +147,8 @@ private:
 	Window window;
 
 	Instance instance;
-	vk::SurfaceKHR surface;
+
+	Surface surface;
 
 	vk::PhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	vk::Device device;
@@ -210,7 +218,6 @@ private:
 
 	void initVulkan()
 	{
-		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
 		createSwapChain();
@@ -253,8 +260,6 @@ private:
 	void recreateSwapChain();
 
 	void createInstance();
-
-	void createSurface();
 
 	void pickPhysicalDevice();
 

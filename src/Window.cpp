@@ -11,6 +11,7 @@ Window::Window(size_t width, size_t height, const char* title) :
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
 	m_window = glfwCreateWindow(m_width, m_height, m_title, nullptr, nullptr);
+	// TODO : window resize handle
 	// glfwSetWindowUserPointer(window, this);
 	// glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
