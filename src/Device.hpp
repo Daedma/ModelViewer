@@ -7,6 +7,7 @@
 
 class Device
 {
+public:
 	struct QueueFamilyIndices
 	{
 		std::optional<uint32_t> graphicsFamily;
@@ -29,6 +30,27 @@ public:
 	Device(vk::Instance instance, vk::SurfaceKHR surface);
 
 	~Device() noexcept;
+
+	vk::PhysicalDevice getPhysicalDevice() const noexcept { return m_physicalDevice; }
+
+	vk::Device get() const noexcept { return m_logicalDevice; }
+
+	vk::Queue getGraphicsQueue() const noexcept { return m_graphicsQueue; }
+
+	vk::Queue getPresentQueue() const noexcept { return m_presentQueue; }
+
+	vk::SampleCountFlagBits getMsaaSamples() const noexcept { return m_msaaSamples; }
+
+	SwapChainSupportDetails querySwapChainSupport() const
+	{
+		return querySwapChainSupport(m_physicalDevice);
+	}
+
+	QueueFamilyIndices findQueueFamilies() const
+	{
+		return findQueueFamilies(m_physicalDevice);
+	}
+
 private:
 	vk::Instance m_instance;
 	vk::SurfaceKHR m_surface;

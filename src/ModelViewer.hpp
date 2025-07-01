@@ -31,6 +31,7 @@
 #include "Window.hpp"
 #include "Instance.hpp"
 #include "Surface.hpp"
+#include "Device.hpp"
 
 
 extern const uint32_t WIDTH;
@@ -46,24 +47,6 @@ extern const std::vector<const char*> validationLayers;
 extern const std::vector<const char*> deviceExtensions;
 
 extern const bool enableValidationLayers;
-
-struct QueueFamilyIndices
-{
-	std::optional<uint32_t> graphicsFamily;
-	std::optional<uint32_t> presentFamily;
-
-	bool isComplete()
-	{
-		return graphicsFamily.has_value() && presentFamily.has_value();
-	}
-};
-
-struct SwapChainSupportDetails
-{
-	vk::SurfaceCapabilitiesKHR capabilities;
-	std::vector<vk::SurfaceFormatKHR> formats;
-	std::vector<vk::PresentModeKHR> presentModes;
-};
 
 struct Vertex
 {
@@ -133,7 +116,8 @@ public:
 	ModelViewer() :
 		window(),
 		instance(),
-		surface(instance.get(), window)
+		surface(instance.get(), window),
+		device(instance.get(), surface.get())
 	{}
 
 	void run()
@@ -150,11 +134,7 @@ private:
 
 	Surface surface;
 
-	vk::PhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	vk::Device device;
-
-	vk::Queue graphicsQueue;
-	vk::Queue presentQueue;
+	Device device;
 
 	vk::SwapchainKHR swapChain;
 	std::vector<vk::Image> swapChainImages;
@@ -204,8 +184,6 @@ private:
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 
-	vk::SampleCountFlagBits msaaSamples = vk::SampleCountFlagBits::e1;
-
 	vk::Image colorImage;
 	vk::DeviceMemory colorImageMemory;
 	vk::ImageView colorImageView;
@@ -218,8 +196,6 @@ private:
 
 	void initVulkan()
 	{
-		pickPhysicalDevice();
-		createLogicalDevice();
 		createSwapChain();
 		createImageViews();
 		createRenderPass();
@@ -250,7 +226,7 @@ private:
 			drawFrame();
 		}
 
-		device.waitIdle();
+		device.get().waitIdle();
 	}
 
 	void cleanupSwapChain();
@@ -258,12 +234,6 @@ private:
 	void cleanup();
 
 	void recreateSwapChain();
-
-	void createInstance();
-
-	void pickPhysicalDevice();
-
-	void createLogicalDevice();
 
 	void createSwapChain();
 
@@ -344,31 +314,7 @@ private:
 
 	vk::Extent2D chooseSwapExtent(const vk::SurfaceCapabilitiesKHR& capabilities);
 
-	SwapChainSupportDetails querySwapChainSupport(vk::PhysicalDevice device);
-
-	bool isDeviceSuitable(vk::PhysicalDevice  device);
-
-	bool checkDeviceExtensionSupport(vk::PhysicalDevice device);
-
-	QueueFamilyIndices findQueueFamilies(vk::PhysicalDevice device);
-
 	void updateUniformBuffer(uint32_t currentImage);
-
-	vk::SampleCountFlagBits getMaxUsableSampleCount()
-	{
-		auto physicalDeviceProperties = physicalDevice.getProperties();
-
-		vk::SampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts &
-			physicalDeviceProperties.limits.framebufferDepthSampleCounts;
-		if (counts & vk::SampleCountFlagBits::e64) { return vk::SampleCountFlagBits::e64; }
-		if (counts & vk::SampleCountFlagBits::e32) { return vk::SampleCountFlagBits::e32; }
-		if (counts & vk::SampleCountFlagBits::e16) { return vk::SampleCountFlagBits::e16; }
-		if (counts & vk::SampleCountFlagBits::e8) { return vk::SampleCountFlagBits::e8; }
-		if (counts & vk::SampleCountFlagBits::e4) { return vk::SampleCountFlagBits::e4; }
-		if (counts & vk::SampleCountFlagBits::e2) { return vk::SampleCountFlagBits::e2; }
-
-		return vk::SampleCountFlagBits::e1;
-	}
 
 	void createDescriptorPool();
 

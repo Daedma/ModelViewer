@@ -26,138 +26,9 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-void ModelViewer::pickPhysicalDevice()
-{
-	auto devices = instance.get().enumeratePhysicalDevices();
-	if (devices.empty())
-	{
-		throw std::runtime_error("failed to find GPUs with Vulkan support!");
-	}
-
-	for (const auto& device : devices)
-	{
-		if (isDeviceSuitable(device))
-		{
-			physicalDevice = device;
-			msaaSamples = getMaxUsableSampleCount();
-			break;
-		}
-	}
-
-	if (!physicalDevice)
-	{
-		throw std::runtime_error("failed to find a suitable GPU!");
-	}
-}
-
-bool ModelViewer::isDeviceSuitable(vk::PhysicalDevice device)
-{
-	QueueFamilyIndices indices = findQueueFamilies(device);
-
-	bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-	bool swapChainAdequate = false;
-	if (extensionsSupported)
-	{
-		SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-		swapChainAdequate = !swapChainSupport.formats.empty() &&
-			!swapChainSupport.presentModes.empty();
-	}
-
-	vk::PhysicalDeviceFeatures supportedFeatures = device.getFeatures();
-
-	return indices.isComplete() &&
-		extensionsSupported &&
-		swapChainAdequate &&
-		supportedFeatures.samplerAnisotropy;
-}
-
-QueueFamilyIndices ModelViewer::findQueueFamilies(vk::PhysicalDevice device)
-{
-	QueueFamilyIndices indices;
-
-	auto queueFamilies = device.getQueueFamilyProperties();
-
-	int i = 0;
-	for (const auto& queueFamily : queueFamilies)
-	{
-		if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics)
-		{
-			indices.graphicsFamily = i;
-		}
-
-		vk::Bool32 presentSupport = device.getSurfaceSupportKHR(i, surface.get());
-
-		if (presentSupport)
-		{
-			indices.presentFamily = i;
-		}
-
-		if (indices.isComplete())
-		{
-			break;
-		}
-
-		i++;
-	}
-
-	return indices;
-}
-
-bool ModelViewer::checkDeviceExtensionSupport(vk::PhysicalDevice device)
-{
-	auto availableExtensions = device.enumerateDeviceExtensionProperties();
-	std::set<std::string> requiredExtensions(deviceExtensions.begin(), deviceExtensions.end());
-
-	for (const auto& extension : availableExtensions)
-	{
-		requiredExtensions.erase(extension.extensionName);
-	}
-
-	return requiredExtensions.empty();
-}
-
-SwapChainSupportDetails ModelViewer::querySwapChainSupport(vk::PhysicalDevice device)
-{
-	SwapChainSupportDetails details;
-	details.capabilities = device.getSurfaceCapabilitiesKHR(surface.get());
-	details.formats = device.getSurfaceFormatsKHR(surface.get());
-	details.presentModes = device.getSurfacePresentModesKHR(surface.get());
-	return details;
-}
-
-void ModelViewer::createLogicalDevice()
-{
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
-
-	std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-	std::set<uint32_t> uniqueQueueFamilies = { indices.graphicsFamily.value(), indices.presentFamily.value() };
-
-	const float queuePriority = 1.0f;
-	for (uint32_t queueFamily : uniqueQueueFamilies)
-	{
-		queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlagBits{}, queueFamily, 1, &queuePriority, nullptr);
-	}
-
-	vk::PhysicalDeviceFeatures deviceFeatures;
-	deviceFeatures.setSamplerAnisotropy(vk::True);
-
-	vk::DeviceCreateInfo createInfo({}, queueCreateInfos, {}, deviceExtensions, &deviceFeatures);
-
-	if (enableValidationLayers)
-	{
-		createInfo.setPEnabledLayerNames(validationLayers);
-	}
-
-	device = physicalDevice.createDevice(createInfo);
-
-	graphicsQueue = device.getQueue(indices.graphicsFamily.value(), 0);
-	presentQueue = device.getQueue(indices.presentFamily.value(), 0);
-}
-
 void ModelViewer::createSwapChain()
 {
-	SwapChainSupportDetails swapChainSupport = querySwapChainSupport(physicalDevice);
+	Device::SwapChainSupportDetails swapChainSupport = device.querySwapChainSupport();
 
 	vk::SurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
 	vk::PresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes);
@@ -185,7 +56,7 @@ void ModelViewer::createSwapChain()
 		presentMode,
 		vk::True);
 
-	QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
+	Device::QueueFamilyIndices indices = device.findQueueFamilies();
 	std::array<uint32_t, 2> queueFamilyIndices{ indices.graphicsFamily.value(), indices.presentFamily.value() };
 
 	if (indices.graphicsFamily != indices.presentFamily)
@@ -194,8 +65,8 @@ void ModelViewer::createSwapChain()
 		createInfo.setQueueFamilyIndices(queueFamilyIndices);
 	}
 
-	swapChain = device.createSwapchainKHR(createInfo);
-	swapChainImages = device.getSwapchainImagesKHR(swapChain);
+	swapChain = device.get().createSwapchainKHR(createInfo);
+	swapChainImages = device.get().getSwapchainImagesKHR(swapChain);
 	swapChainImageFormat = surfaceFormat.format;
 	swapChainExtent = extent;
 }
@@ -266,7 +137,7 @@ vk::ImageView ModelViewer::createImageView(vk::Image image, vk::Format format,
 		format,
 		{},
 		{ aspectFlags, 0, mipLevels, 0, 1 });
-	return device.createImageView(viewInfo);
+	return device.get().createImageView(viewInfo);
 }
 
 void ModelViewer::createRenderPass()
@@ -274,7 +145,7 @@ void ModelViewer::createRenderPass()
 	vk::AttachmentDescription colorAttachment(
 		{},
 		swapChainImageFormat,
-		msaaSamples,
+		device.getMsaaSamples(),
 		vk::AttachmentLoadOp::eClear,
 		vk::AttachmentStoreOp::eStore,
 		vk::AttachmentLoadOp::eDontCare,
@@ -299,7 +170,7 @@ void ModelViewer::createRenderPass()
 	vk::AttachmentDescription depthAttachment(
 		{},
 		findDepthFormat(),
-		msaaSamples,
+		device.getMsaaSamples(),
 		vk::AttachmentLoadOp::eClear,
 		vk::AttachmentStoreOp::eDontCare,
 		vk::AttachmentLoadOp::eDontCare,
@@ -336,7 +207,7 @@ void ModelViewer::createRenderPass()
 		dependency
 	);
 
-	renderPass = device.createRenderPass(renderPassInfo);
+	renderPass = device.get().createRenderPass(renderPassInfo);
 }
 
 vk::Format ModelViewer::findDepthFormat()
@@ -352,7 +223,7 @@ vk::Format ModelViewer::findSupportedFormat(const std::vector<vk::Format>& candi
 {
 	for (vk::Format format : candidates)
 	{
-		vk::FormatProperties props = physicalDevice.getFormatProperties(format);
+		vk::FormatProperties props = device.getPhysicalDevice().getFormatProperties(format);
 		if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features)
 		{
 			return format;
@@ -386,7 +257,7 @@ void ModelViewer::createDescriptorSetLayout()
 
 	std::array<vk::DescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
 	vk::DescriptorSetLayoutCreateInfo layoutInfo({}, bindings);
-	descriptorSetLayout = device.createDescriptorSetLayout(layoutInfo);
+	descriptorSetLayout = device.get().createDescriptorSetLayout(layoutInfo);
 }
 
 void ModelViewer::createGraphicsPipeline()
@@ -437,7 +308,7 @@ void ModelViewer::createGraphicsPipeline()
 	);
 	rasterizer.setLineWidth(1.f);
 
-	vk::PipelineMultisampleStateCreateInfo multisampling({}, msaaSamples, vk::False);
+	vk::PipelineMultisampleStateCreateInfo multisampling({}, device.getMsaaSamples(), vk::False);
 
 	vk::PipelineColorBlendAttachmentState colorBlendAttachment;
 	colorBlendAttachment
@@ -476,7 +347,7 @@ void ModelViewer::createGraphicsPipeline()
 		1.f
 	);
 
-	pipelineLayout = device.createPipelineLayout({ {}, descriptorSetLayout });
+	pipelineLayout = device.get().createPipelineLayout({ {}, descriptorSetLayout });
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo{
 		{},
@@ -497,7 +368,7 @@ void ModelViewer::createGraphicsPipeline()
 		0
 	};
 
-	auto result = device.createGraphicsPipeline(nullptr, pipelineInfo);
+	auto result = device.get().createGraphicsPipeline(nullptr, pipelineInfo);
 
 	if (result.result != vk::Result::eSuccess)
 	{
@@ -506,32 +377,32 @@ void ModelViewer::createGraphicsPipeline()
 
 	graphicsPipeline = result.value;
 
-	device.destroyShaderModule(fragShaderModule);
-	device.destroyShaderModule(vertShaderModule);
+	device.get().destroyShaderModule(fragShaderModule);
+	device.get().destroyShaderModule(vertShaderModule);
 }
 
 vk::ShaderModule ModelViewer::createShaderModule(const std::vector<uint32_t>& code)
 {
-	return device.createShaderModule({ {}, code });
+	return device.get().createShaderModule({ {}, code });
 }
 
 void ModelViewer::createCommandPool()
 {
-	QueueFamilyIndices queueFamilyIndices = findQueueFamilies(physicalDevice);
+	Device::QueueFamilyIndices queueFamilyIndices = device.findQueueFamilies();
 
 	vk::CommandPoolCreateInfo poolInfo{
 		vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
 		queueFamilyIndices.graphicsFamily.value()
 	};
 
-	commandPool = device.createCommandPool(poolInfo);
+	commandPool = device.get().createCommandPool(poolInfo);
 }
 
 void ModelViewer::createColorResources()
 {
 	vk::Format colorFormat = swapChainImageFormat;
 
-	createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, colorFormat,
+	createImage(swapChainExtent.width, swapChainExtent.height, 1, device.getMsaaSamples(), colorFormat,
 		vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
 		vk::MemoryPropertyFlagBits::eDeviceLocal, colorImage, colorImageMemory);
 	colorImageView = createImageView(colorImage, colorFormat, vk::ImageAspectFlagBits::eColor, 1);
@@ -556,22 +427,22 @@ void ModelViewer::createImage(uint32_t width, uint32_t height, uint32_t mipLevel
 		vk::ImageLayout::eUndefined
 	};
 
-	image = device.createImage(imageInfo);
+	image = device.get().createImage(imageInfo);
 
-	vk::MemoryRequirements memRequirements = device.getImageMemoryRequirements(image);
+	vk::MemoryRequirements memRequirements = device.get().getImageMemoryRequirements(image);
 
 	vk::MemoryAllocateInfo allocInfo(
 		memRequirements.size,
 		findMemoryType(memRequirements.memoryTypeBits, properties)
 	);
 
-	imageMemory = device.allocateMemory(allocInfo);
-	device.bindImageMemory(image, imageMemory, 0);
+	imageMemory = device.get().allocateMemory(allocInfo);
+	device.get().bindImageMemory(image, imageMemory, 0);
 }
 
 uint32_t ModelViewer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 {
-	vk::PhysicalDeviceMemoryProperties memProperties = physicalDevice.getMemoryProperties();
+	vk::PhysicalDeviceMemoryProperties memProperties = device.getPhysicalDevice().getMemoryProperties();
 
 	for (uint32_t i = 0; i != memProperties.memoryTypeCount; ++i)
 	{
@@ -587,7 +458,7 @@ uint32_t ModelViewer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlag
 void ModelViewer::createDepthResources()
 {
 	vk::Format depthFormat = findDepthFormat();
-	createImage(swapChainExtent.width, swapChainExtent.height, 1, msaaSamples, depthFormat, vk::ImageTiling::eOptimal,
+	createImage(swapChainExtent.width, swapChainExtent.height, 1, device.getMsaaSamples(), depthFormat, vk::ImageTiling::eOptimal,
 		vk::ImageUsageFlagBits::eDepthStencilAttachment, vk::MemoryPropertyFlagBits::eDeviceLocal, depthImage, depthImageMemory);
 	depthImageView = createImageView(depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth, 1);
 }
@@ -613,7 +484,7 @@ void ModelViewer::createFramebuffers()
 			1
 		};
 
-		swapChainFramebuffers[i] = device.createFramebuffer(framebufferInfo);
+		swapChainFramebuffers[i] = device.get().createFramebuffer(framebufferInfo);
 	}
 }
 
@@ -636,9 +507,9 @@ void ModelViewer::createTextureImage()
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 		stagingBuffer, stagingBufferMemory);
 
-	void* data = device.mapMemory(stagingBufferMemory, 0, imageSize);
+	void* data = device.get().mapMemory(stagingBufferMemory, 0, imageSize);
 	memcpy(data, pixels, static_cast<size_t>(imageSize));
-	device.unmapMemory(stagingBufferMemory);
+	device.get().unmapMemory(stagingBufferMemory);
 
 	stbi_image_free(pixels);
 
@@ -654,8 +525,8 @@ void ModelViewer::createTextureImage()
 
 	generateMipmaps(textureImage, vk::Format::eR8G8B8A8Srgb, texWidth, texHeight, mipLevels);
 
-	device.destroyBuffer(stagingBuffer);
-	device.freeMemory(stagingBufferMemory);
+	device.get().destroyBuffer(stagingBuffer);
+	device.get().freeMemory(stagingBufferMemory);
 }
 
 void ModelViewer::createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties, vk::Buffer& buffer, vk::DeviceMemory& bufferMemory)
@@ -668,17 +539,17 @@ void ModelViewer::createBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, 
 		{}
 	};
 
-	buffer = device.createBuffer(bufferInfo);
+	buffer = device.get().createBuffer(bufferInfo);
 
-	vk::MemoryRequirements memRequirements = device.getBufferMemoryRequirements(buffer);
+	vk::MemoryRequirements memRequirements = device.get().getBufferMemoryRequirements(buffer);
 
 	vk::MemoryAllocateInfo allocInfo{
 		memRequirements.size,
 		findMemoryType(memRequirements.memoryTypeBits, properties)
 	};
 
-	bufferMemory = device.allocateMemory(allocInfo);
-	device.bindBufferMemory(buffer, bufferMemory, 0);
+	bufferMemory = device.get().allocateMemory(allocInfo);
+	device.get().bindBufferMemory(buffer, bufferMemory, 0);
 }
 
 void ModelViewer::transitionImageLayout(vk::Image image, vk::Format format, vk::ImageLayout oldLayout, vk::ImageLayout newLayout, uint32_t mipLevels)
@@ -729,7 +600,7 @@ vk::CommandBuffer ModelViewer::beginSingleTimeCommands()
 {
 	vk::CommandBufferAllocateInfo allocInfo{ commandPool, vk::CommandBufferLevel::ePrimary, 1 };
 
-	vk::CommandBuffer commandBuffer = device.allocateCommandBuffers(allocInfo)[0];
+	vk::CommandBuffer commandBuffer = device.get().allocateCommandBuffers(allocInfo)[0];
 
 	commandBuffer.begin({ vk::CommandBufferUsageFlagBits::eOneTimeSubmit });
 
@@ -742,10 +613,10 @@ void ModelViewer::endSingleTimeCommands(vk::CommandBuffer commandBuffer)
 
 	vk::SubmitInfo submitInfo{ {}, {}, commandBuffer, {} };
 
-	graphicsQueue.submit(submitInfo);
-	graphicsQueue.waitIdle();
+	device.getGraphicsQueue().submit(submitInfo);
+	device.getGraphicsQueue().waitIdle();
 
-	device.freeCommandBuffers(commandPool, commandBuffer);
+	device.get().freeCommandBuffers(commandPool, commandBuffer);
 }
 
 void ModelViewer::copyBufferToImage(vk::Buffer buffer, vk::Image image, uint32_t width, uint32_t height)
@@ -770,7 +641,7 @@ void ModelViewer::generateMipmaps(vk::Image image, vk::Format imageFormat, int32
 	int32_t texHeight, uint32_t mipLevels)
 {
 	// Check if image format supports linear blitting
-	vk::FormatProperties formatProperties = physicalDevice.getFormatProperties(imageFormat);
+	vk::FormatProperties formatProperties = device.getPhysicalDevice().getFormatProperties(imageFormat);
 	if (!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
 	{
 		throw std::runtime_error("texture image format does not support linear blitting!");
@@ -856,7 +727,7 @@ void ModelViewer::createTextureSampler()
 		vk::SamplerAddressMode::eRepeat,
 		0.f,
 		vk::True,
-		physicalDevice.getProperties().limits.maxSamplerAnisotropy,
+		device.getPhysicalDevice().getProperties().limits.maxSamplerAnisotropy,
 		vk::False,
 		vk::CompareOp::eAlways,
 		0.f,
@@ -865,7 +736,7 @@ void ModelViewer::createTextureSampler()
 		vk::False
 	};
 
-	textureSampler = device.createSampler(samplerInfo);
+	textureSampler = device.get().createSampler(samplerInfo);
 }
 
 void ModelViewer::loadModel()
@@ -922,17 +793,17 @@ void ModelViewer::createVertexBuffer()
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 		stagingBuffer, stagingBufferMemory);
 
-	void* data = device.mapMemory(stagingBufferMemory, 0, bufferSize);
+	void* data = device.get().mapMemory(stagingBufferMemory, 0, bufferSize);
 	memcpy(data, vertices.data(), bufferSize);
-	device.unmapMemory(stagingBufferMemory);
+	device.get().unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal, vertexBuffer, vertexBufferMemory);
 
 	copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
-	device.destroyBuffer(stagingBuffer);
-	device.freeMemory(stagingBufferMemory);
+	device.get().destroyBuffer(stagingBuffer);
+	device.get().freeMemory(stagingBufferMemory);
 }
 
 void ModelViewer::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
@@ -954,17 +825,17 @@ void ModelViewer::createIndexBuffer()
 		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
 		stagingBuffer, stagingBufferMemory);
 
-	void* data = device.mapMemory(stagingBufferMemory, 0, bufferSize);
+	void* data = device.get().mapMemory(stagingBufferMemory, 0, bufferSize);
 	memcpy(data, indices.data(), bufferSize);
-	device.unmapMemory(stagingBufferMemory);
+	device.get().unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal, indexBuffer, indexBufferMemory);
 
 	copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
-	device.destroyBuffer(stagingBuffer);
-	device.freeMemory(stagingBufferMemory);
+	device.get().destroyBuffer(stagingBuffer);
+	device.get().freeMemory(stagingBufferMemory);
 }
 
 void ModelViewer::createUniformBuffers()
@@ -981,7 +852,7 @@ void ModelViewer::createUniformBuffers()
 			vk::MemoryPropertyFlagBits::eHostCoherent | vk::MemoryPropertyFlagBits::eHostVisible,
 			uniformBuffers[i], uniformBuffersMemory[i]);
 
-		uniformBuffersMapped[i] = device.mapMemory(uniformBuffersMemory[i], 0, bufferSize, {});
+		uniformBuffersMapped[i] = device.get().mapMemory(uniformBuffersMemory[i], 0, bufferSize, {});
 	}
 }
 
@@ -998,7 +869,7 @@ void ModelViewer::createDescriptorPool()
 		poolSizes
 	};
 
-	descriptorPool = device.createDescriptorPool(poolInfo);
+	descriptorPool = device.get().createDescriptorPool(poolInfo);
 }
 
 void ModelViewer::createDescriptorSets()
@@ -1006,7 +877,7 @@ void ModelViewer::createDescriptorSets()
 	std::vector<vk::DescriptorSetLayout> layouts(MAX_FRAMES_IN_FLIGHT, descriptorSetLayout);
 	vk::DescriptorSetAllocateInfo allocInfo{ descriptorPool, layouts };
 
-	descriptorSets = device.allocateDescriptorSets(allocInfo);
+	descriptorSets = device.get().allocateDescriptorSets(allocInfo);
 
 	for (size_t i = 0; i != MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -1034,7 +905,7 @@ void ModelViewer::createDescriptorSets()
 			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
 			.setImageInfo(imageInfo);
 
-		device.updateDescriptorSets(descriptorWrites, nullptr);
+		device.get().updateDescriptorSets(descriptorWrites, nullptr);
 	}
 }
 
@@ -1048,7 +919,7 @@ void ModelViewer::createCommandBuffers()
 		MAX_FRAMES_IN_FLIGHT
 	};
 
-	commandBuffers = device.allocateCommandBuffers(allocInfo);
+	commandBuffers = device.get().allocateCommandBuffers(allocInfo);
 }
 
 void ModelViewer::createSyncObjects()
@@ -1059,15 +930,15 @@ void ModelViewer::createSyncObjects()
 
 	for (size_t i = 0; i != MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		imageAvailableSemaphores[i] = device.createSemaphore({});
-		renderFinishedSemaphores[i] = device.createSemaphore({});
-		inFlightFences[i] = device.createFence({ vk::FenceCreateFlagBits::eSignaled });
+		imageAvailableSemaphores[i] = device.get().createSemaphore({});
+		renderFinishedSemaphores[i] = device.get().createSemaphore({});
+		inFlightFences[i] = device.get().createFence({ vk::FenceCreateFlagBits::eSignaled });
 	}
 }
 
 void ModelViewer::drawFrame()
 {
-	vk::Result waitForFencesResult = device.waitForFences(inFlightFences[currentFrame], vk::True, UINT64_MAX);
+	vk::Result waitForFencesResult = device.get().waitForFences(inFlightFences[currentFrame], vk::True, UINT64_MAX);
 
 	if (waitForFencesResult != vk::Result::eSuccess)
 	{
@@ -1075,7 +946,7 @@ void ModelViewer::drawFrame()
 	}
 
 	uint32_t imageIndex;
-	auto acquireResult = device.acquireNextImageKHR(swapChain, UINT64_MAX,
+	auto acquireResult = device.get().acquireNextImageKHR(swapChain, UINT64_MAX,
 		imageAvailableSemaphores[currentFrame], nullptr);
 
 	switch (acquireResult.result)
@@ -1092,7 +963,7 @@ void ModelViewer::drawFrame()
 		break;
 	}
 
-	device.resetFences(inFlightFences[currentFrame]);
+	device.get().resetFences(inFlightFences[currentFrame]);
 
 	commandBuffers[currentFrame].reset();
 	recordCommandBuffer(commandBuffers[currentFrame], imageIndex);
@@ -1108,7 +979,7 @@ void ModelViewer::drawFrame()
 		renderFinishedSemaphores[currentFrame]
 	};
 
-	graphicsQueue.submit(submitInfo, inFlightFences[currentFrame]);
+	device.getGraphicsQueue().submit(submitInfo, inFlightFences[currentFrame]);
 
 	vk::PresentInfoKHR presentInfo{
 		renderFinishedSemaphores[currentFrame],
@@ -1117,7 +988,7 @@ void ModelViewer::drawFrame()
 		{}
 	};
 
-	vk::Result presentResult = presentQueue.presentKHR(presentInfo);
+	vk::Result presentResult = device.getPresentQueue().presentKHR(presentInfo);
 
 	if (presentResult == vk::Result::eErrorOutOfDateKHR ||
 		presentResult == vk::Result::eSuboptimalKHR || framebufferResized)
@@ -1197,21 +1068,21 @@ void ModelViewer::updateUniformBuffer(uint32_t currentImage)
 
 void ModelViewer::cleanupSwapChain()
 {
-	device.destroyImageView(colorImageView);
-	device.destroyImage(colorImage);
-	device.freeMemory(colorImageMemory);
+	device.get().destroyImageView(colorImageView);
+	device.get().destroyImage(colorImage);
+	device.get().freeMemory(colorImageMemory);
 
 	for (auto framebuffer : swapChainFramebuffers)
 	{
-		device.destroyFramebuffer(framebuffer);
+		device.get().destroyFramebuffer(framebuffer);
 	}
 
 	for (auto imageView : swapChainImageViews)
 	{
-		device.destroyImageView(imageView);
+		device.get().destroyImageView(imageView);
 	}
 
-	device.destroySwapchainKHR(swapChain);
+	device.get().destroySwapchainKHR(swapChain);
 }
 
 void ModelViewer::recreateSwapChain()
@@ -1224,7 +1095,7 @@ void ModelViewer::recreateSwapChain()
 		glfwWaitEvents();
 	}
 
-	device.waitIdle();
+	device.get().waitIdle();
 
 	cleanupSwapChain();
 
@@ -1239,41 +1110,39 @@ void ModelViewer::cleanup()
 {
 	cleanupSwapChain();
 
-	device.destroyImageView(depthImageView);
-	device.destroyImage(depthImage);
-	device.freeMemory(depthImageMemory);
+	device.get().destroyImageView(depthImageView);
+	device.get().destroyImage(depthImage);
+	device.get().freeMemory(depthImageMemory);
 
-	device.destroySampler(textureSampler);
-	device.destroyImageView(textureImageView);
-	device.destroyImage(textureImage);
-	device.freeMemory(textureImageMemory);
-
-	for (size_t i = 0; i != MAX_FRAMES_IN_FLIGHT; ++i)
-	{
-		device.destroyBuffer(uniformBuffers[i]);
-		device.freeMemory(uniformBuffersMemory[i]);
-	}
-
-	device.destroyDescriptorPool(descriptorPool);
-	device.destroyDescriptorSetLayout(descriptorSetLayout);
-	device.destroyPipeline(graphicsPipeline);
-	device.destroyPipelineLayout(pipelineLayout);
-	device.destroyRenderPass(renderPass);
-
-	device.destroyBuffer(indexBuffer);
-	device.freeMemory(indexBufferMemory);
-
-	device.destroyBuffer(vertexBuffer);
-	device.freeMemory(vertexBufferMemory);
+	device.get().destroySampler(textureSampler);
+	device.get().destroyImageView(textureImageView);
+	device.get().destroyImage(textureImage);
+	device.get().freeMemory(textureImageMemory);
 
 	for (size_t i = 0; i != MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		device.destroySemaphore(renderFinishedSemaphores[i]);
-		device.destroySemaphore(imageAvailableSemaphores[i]);
-		device.destroyFence(inFlightFences[i]);
+		device.get().destroyBuffer(uniformBuffers[i]);
+		device.get().freeMemory(uniformBuffersMemory[i]);
 	}
 
-	device.destroyCommandPool(commandPool);
+	device.get().destroyDescriptorPool(descriptorPool);
+	device.get().destroyDescriptorSetLayout(descriptorSetLayout);
+	device.get().destroyPipeline(graphicsPipeline);
+	device.get().destroyPipelineLayout(pipelineLayout);
+	device.get().destroyRenderPass(renderPass);
 
-	device.destroy();
+	device.get().destroyBuffer(indexBuffer);
+	device.get().freeMemory(indexBufferMemory);
+
+	device.get().destroyBuffer(vertexBuffer);
+	device.get().freeMemory(vertexBufferMemory);
+
+	for (size_t i = 0; i != MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		device.get().destroySemaphore(renderFinishedSemaphores[i]);
+		device.get().destroySemaphore(imageAvailableSemaphores[i]);
+		device.get().destroyFence(inFlightFences[i]);
+	}
+
+	device.get().destroyCommandPool(commandPool);
 }
