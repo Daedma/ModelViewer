@@ -26,6 +26,7 @@ add_executable(${PROJECT_NAME}
 	src/Instance.cpp
 	src/Window.cpp
 	src/Surface.cpp
+	src/Device.cpp
 	src/stb_Impl.cpp
 	src/tiny_obj_loader_Impl.cpp)
 
