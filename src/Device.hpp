@@ -5,6 +5,8 @@
 #include <optional>
 #include <vector>
 
+class Surface;
+
 class Device
 {
 public:
@@ -27,13 +29,15 @@ public:
 	};
 
 public:
-	Device(vk::Instance instance, vk::SurfaceKHR surface);
+	Device(vk::Instance instance, const Surface& surface);
 
 	~Device() noexcept;
 
 	vk::PhysicalDevice getPhysicalDevice() const noexcept { return m_physicalDevice; }
 
 	vk::Device get() const noexcept { return m_logicalDevice; }
+
+	const Surface& getSurface() const noexcept { return m_surface; }
 
 	vk::Queue getGraphicsQueue() const noexcept { return m_graphicsQueue; }
 
@@ -53,8 +57,9 @@ public:
 
 private:
 	vk::Instance m_instance;
-	vk::SurfaceKHR m_surface;
+	const Surface& m_surface;
 
+	// TODO vk::QueueFamilyIndices m_queueFamilies;
 	vk::PhysicalDevice m_physicalDevice;
 	vk::SampleCountFlagBits m_msaaSamples;
 

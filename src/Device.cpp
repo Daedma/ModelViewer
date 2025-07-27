@@ -2,6 +2,7 @@
 #include <string>
 
 #include "Device.hpp"
+#include "Surface.hpp"
 
 #include "AppInfo.hpp"
 
@@ -9,7 +10,7 @@ const std::vector<const char*> Device::deviceExtensions = {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-Device::Device(vk::Instance instance, vk::SurfaceKHR surface) :
+Device::Device(vk::Instance instance, const Surface& surface) :
 	m_instance(instance),
 	m_surface(surface),
 	m_physicalDevice(pickPhysicalDevice()),
@@ -79,7 +80,7 @@ Device::QueueFamilyIndices Device::findQueueFamilies(vk::PhysicalDevice device) 
 			indices.graphicsFamily = i;
 		}
 
-		vk::Bool32 presentSupport = device.getSurfaceSupportKHR(i, m_surface);
+		vk::Bool32 presentSupport = device.getSurfaceSupportKHR(i, m_surface.get());
 
 		if (presentSupport)
 		{
@@ -113,9 +114,9 @@ bool Device::checkDeviceExtensionSupport(vk::PhysicalDevice device) const
 Device::SwapChainSupportDetails Device::querySwapChainSupport(vk::PhysicalDevice device) const
 {
 	SwapChainSupportDetails details;
-	details.capabilities = device.getSurfaceCapabilitiesKHR(m_surface);
-	details.formats = device.getSurfaceFormatsKHR(m_surface);
-	details.presentModes = device.getSurfacePresentModesKHR(m_surface);
+	details.capabilities = device.getSurfaceCapabilitiesKHR(m_surface.get());
+	details.formats = device.getSurfaceFormatsKHR(m_surface.get());
+	details.presentModes = device.getSurfacePresentModesKHR(m_surface.get());
 	return details;
 }
 

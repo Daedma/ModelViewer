@@ -117,7 +117,7 @@ public:
 		window(),
 		instance(),
 		surface(instance.get(), window),
-		device(instance.get(), surface.get())
+		device(instance.get(), surface)
 	{}
 
 	void run()
@@ -198,12 +198,12 @@ private:
 	{
 		createSwapChain();
 		createImageViews();
+		createColorResources();
+		createDepthResources();
 		createRenderPass();
 		createDescriptorSetLayout();
 		createGraphicsPipeline();
 		createCommandPool();
-		createColorResources();
-		createDepthResources();
 		createFramebuffers();
 		createTextureImage();
 		createTextureImageView();

@@ -12,6 +12,7 @@ Window::Window(size_t width, size_t height, const char* title) :
 
 	m_window = glfwCreateWindow(m_width, m_height, m_title, nullptr, nullptr);
 	// TODO : window resize handle
+
 	// glfwSetWindowUserPointer(window, this);
 	// glfwSetFramebufferSizeCallback(window, framebufferResizeCallback);
 }
@@ -30,4 +31,11 @@ vk::SurfaceKHR Window::createSurface(const vk::Instance& instance) const
 		throw std::runtime_error("failed to create window surface!");
 	}
 	return surface;
+}
+
+vk::Extent2D Window::getFramebufferExtent() const
+{
+	int width, height;
+	glfwGetFramebufferSize(m_window, &width, &height);
+	return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
