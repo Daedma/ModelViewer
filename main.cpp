@@ -1,18 +1,24 @@
-#include "src/ModelViewer.hpp"
+#include "Renderer.hpp"
+#include "SwapchainManager.hpp"
+#include "VulkanContext.hpp"
 
 int main()
 {
-	ModelViewer app;
+  // Инициализация окна (GLFW/SDL и т.д.)
+  GLFWwindow * window = initWindow();
 
-	try
-	{
-		app.run();
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}
+  // Создание поверхности
+  VkSurfaceKHR surface = createWindowSurface( instance, window );
 
-	return EXIT_SUCCESS;
+  VulkanContext    context;
+  SwapchainManager swapchain( context, surface, 1280, 720 );
+  Renderer         renderer( context, swapchain );
+
+  while ( !glfwWindowShouldClose( window ) )
+  {
+    glfwPollEvents();
+    renderer.drawFrame();
+  }
+
+  context.getDevice().waitIdle();  // vk::raii: RAII всё почистит сам
 }
