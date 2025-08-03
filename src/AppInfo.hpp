@@ -63,4 +63,11 @@ namespace appInfo
 			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
 	}
+
+	namespace features
+	{
+		constexpr vk::Format imageFormat = vk::Format::eB8G8R8A8Srgb;
+
+		constexpr vk::ColorSpaceKHR colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+	}
 }
