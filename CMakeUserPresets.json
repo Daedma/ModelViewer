@@ -39,5 +39,7 @@
 			"configurePreset": "default",
 			"cleanFirst": true
 		}
-	]
+	],
+  "testPresets": [
+  ]
 }

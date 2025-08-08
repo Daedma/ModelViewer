@@ -79,7 +79,9 @@ private:
   vk::DebugUtilsMessageTypeFlagsEXT m_messageType =
     vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
-  vk::raii::Instance        createInstance(vk::raii::Context& context);
+  vk::raii::Instance        createInstance( vk::raii::Context & context );
   std::vector<const char *> getRequiredExtensions() const;
   bool                      checkValidationLayersSupport();
+
+  uint32_t chooseGraphicsQueue(const vk::raii::PhysicalDevice& physicalDevice) const;
 };

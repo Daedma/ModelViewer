@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(triangle)
+project(model_viewer)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -18,18 +18,33 @@ add_compile_definitions(GLM_FORCE_RADIANS)
 add_compile_definitions(GLM_FORCE_DEPTH_ZERO_TO_ONE)
 add_compile_definitions(GLM_ENABLE_EXPERIMENTAL)
 
-add_executable(${PROJECT_NAME} 
-	main.cpp
-	src/ModelViewer.cpp
-	src/stb_Impl.cpp
-	src/tiny_obj_loader_Impl.cpp)
+set(EXTRALIBS_IMPL
+  src/stb_Impl.cpp
+  src/tiny_obj_loader_Impl.cpp
+)
 
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+set(MV_SOURCES 
+  src/VulkanContextBuilder.cpp
+)
 
-target_include_directories(${PROJECT_NAME} PRIVATE deps/stb)
-target_include_directories(${PROJECT_NAME} PRIVATE deps/tinyobjloader)
+add_library(${PROJECT_NAME}_lib 
+  ${MV_SOURCES}
+  ${EXTRALIBS_IMPL}
+)
 
-target_link_libraries(${PROJECT_NAME} glfw ${GLFW_LIBRARIES} Vulkan::Vulkan)
+  
+target_include_directories(${PROJECT_NAME}_lib PUBLIC src)
+
+target_include_directories(${PROJECT_NAME}_lib PUBLIC deps/stb)
+target_include_directories(${PROJECT_NAME}_lib PUBLIC deps/tinyobjloader)
+
+target_link_libraries(${PROJECT_NAME}_lib glfw ${GLFW_LIBRARIES} Vulkan::Vulkan)
+
+add_library(${PROJECT_NAME}::lib ALIAS ${PROJECT_NAME}_lib)
+
+add_executable(${PROJECT_NAME} main.cpp src/ModelViewer.cpp)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}::lib)
 
 # Добавление команды для трансляции шейдеров
 add_custom_command(
@@ -49,3 +64,11 @@ add_custom_target(
 )
 
 add_dependencies(${PROJECT_NAME} ShadersTarget)
+
+set(VS_DEBUGGER_WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+include(CTest)
+if(BUILD_TESTING)
+  add_subdirectory(deps/googletest)
+  add_subdirectory(test)
+endif()
