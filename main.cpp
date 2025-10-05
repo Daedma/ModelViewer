@@ -2,7 +2,7 @@
 
 int main()
 {
-  ModelViewer app;
-  app.run();
-  return 0;
+    ModelViewer app;
+    app.run();
+    return 0;
 }

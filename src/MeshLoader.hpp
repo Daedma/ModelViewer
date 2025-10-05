@@ -6,5 +6,5 @@
 class ModelLoader
 {
 public:
-  VulkanMesh loadOBJ( const std::string & filepath );
+    VulkanMesh loadOBJ(const std::string& filepath);
 };
