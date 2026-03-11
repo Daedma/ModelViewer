@@ -6,7 +6,7 @@
 	},
 	"configurePresets": [
 		{
-			"name": "default",
+			"name": "Windows",
 			"hidden": false,
 			"generator": "Ninja Multi-Config",
 			"binaryDir": "${sourceDir}/build",
@@ -14,32 +14,70 @@
 				"CMAKE_C_COMPILER": "clang",
 				"CMAKE_CXX_COMPILER": "clang++"
 			}
+		},
+		{
+			"name": "Linux",
+			"hidden": false,
+			"generator": "Ninja Multi-Config",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_C_COMPILER": "gcc",
+				"CMAKE_CXX_COMPILER": "g++"
+			}
 		}
 	],
 	"buildPresets": [
 		{
-			"name": "Debug",
+			"name": "Debug (Linux)",
 			"configuration": "Debug",
-			"configurePreset": "default"
+            "jobs": 6,
+            "configurePreset": "Linux"
 		},
 		{
-			"name": "Release",
+			"name": "Release (Linux)",
 			"configuration": "Release",
-			"configurePreset": "default"
+            "jobs": 6,
+            "configurePreset": "Linux"
 		},
 		{
-			"name": "Debug (clean)",
+			"name": "Debug (Linux, clean)",
 			"configuration": "Debug",
-			"configurePreset": "default",
-			"cleanFirst": true
+            "jobs": 6,
+			"cleanFirst": true,
+            "configurePreset": "Linux"
 		},
 		{
-			"name": "Release (clean)",
+			"name": "Release (Linux, clean)",
 			"configuration": "Release",
-			"configurePreset": "default",
-			"cleanFirst": true
+            "jobs": 6,
+			"cleanFirst": true,
+            "configurePreset": "Linux"
+		},
+		{
+			"name": "Debug (Windows)",
+			"configuration": "Debug",
+            "jobs": 6,
+            "configurePreset": "Windows"
+		},
+		{
+			"name": "Release (Windows)",
+			"configuration": "Release",
+            "jobs": 6,
+            "configurePreset": "Windows"
+		},
+		{
+			"name": "Debug (Windows, clean)",
+			"configuration": "Debug",
+            "jobs": 6,
+			"cleanFirst": true,
+            "configurePreset": "Windows"
+		},
+		{
+			"name": "Release (Windows, clean)",
+			"configuration": "Release",
+            "jobs": 6,
+			"cleanFirst": true,
+            "configurePreset": "Windows"
 		}
-	],
-  "testPresets": [
-  ]
+	]
 }
